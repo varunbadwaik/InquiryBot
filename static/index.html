@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InquiryBot — AI Knowledge Assistant</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- =========================================================================
+       CHAT INTERFACE
+       ========================================================================= -->
+  <div id="chat-app" class="app-container">
+    
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar left-sidebar">
+      <div class="sidebar-header">
+        <div class="logo-area">
+          <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
+          <div class="logo-text">
+            <h2>InquiryBot</h2>
+            <span>AI Knowledge Assistant</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Details Card -->
+      <div class="card" id="details-card">
+        <h3>Your Details</h3>
+        <p class="card-subtitle">Provide your details to create or resume your lead session.</p>
+        <form id="lead-form">
+          <div class="form-group">
+            <label for="lead-name">Full Name *</label>
+            <input type="text" id="lead-name" placeholder="Rahul Sharma" required>
+          </div>
+          <div class="form-group">
+            <label for="lead-phone">Phone Number *</label>
+            <input type="text" id="lead-phone" placeholder="+91 98765 43210" required>
+          </div>
+          <div class="form-group">
+            <label for="lead-email">Email Address</label>
+            <input type="email" id="lead-email" placeholder="rahul.sharma@email.com">
+          </div>
+          <div class="form-group">
+            <label for="lead-type">Inquiry Type</label>
+            <select id="lead-type">
+              <option value="General inquiry">General Inquiry</option>
+              <option value="Product Information">Product Information</option>
+              <option value="Pricing">Pricing</option>
+              <option value="Support">Support</option>
+              <option value="Contact">Contact</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="lead-org">Organization</label>
+            <input type="text" id="lead-org" placeholder="TechNova Solutions">
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Save & Start Session</button>
+        </form>
+      </div>
+
+      <!-- Current Session Card (Hidden until registered) -->
+      <div class="card" id="session-card" style="display: none;">
+        <div class="card-header-row">
+          <h3><i class="fa-solid fa-clock-rotate-left"></i> Current Session</h3>
+          <span class="active-dot-row"><span class="dot"></span> Active</span>
+        </div>
+        <div class="session-detail">
+          <label>Session ID</label>
+          <span id="display-session-id">N/A</span>
+        </div>
+        <div class="session-detail">
+          <label>Started At</label>
+          <span id="display-session-start">N/A</span>
+        </div>
+        <div class="session-detail">
+          <label>Last Activity</label>
+          <span id="display-session-activity">Just now</span>
+        </div>
+      </div>
+
+      <!-- Quick Links -->
+      <div class="quick-links">
+        <h4>Quick Links</h4>
+        <a href="#" id="link-admin-panel"><i class="fa-solid fa-lock"></i> Go to Admin Panel</a>
+        <a href="#" id="link-contact-support"><i class="fa-solid fa-envelope"></i> Contact Support</a>
+      </div>
+    </aside>
+
+    <!-- CENTER CHAT AREA -->
+    <main class="chat-area">
+      <!-- Chat Header -->
+      <header class="chat-header">
+        <div class="header-pill model-pill">
+          <span class="pill-label">Model:</span> Llama 3 8B Instruct (via OpenRouter)
+        </div>
+        <div class="header-pill db-pill">
+          <span class="dot green-dot"></span> Vector DB: ChromaDB
+        </div>
+      </header>
+
+      <!-- Welcome Box -->
+      <div class="welcome-box">
+        <div class="welcome-icon"><i class="fa-solid fa-comment-dots"></i></div>
+        <div class="welcome-text">
+          <h3>Welcome to InquiryBot!</h3>
+          <p>Ask your question below. I will search the knowledge base and provide accurate, citation-backed answers using our RAG pipeline.</p>
+        </div>
+      </div>
+
+      <!-- Messages Stack -->
+      <div class="messages-container" id="messages-container">
+        <!-- Message bubbles dynamically injected by JS -->
+        <div class="no-messages-placeholder">
+          <p>Please register on the left to start chatting.</p>
+        </div>
+      </div>
+
+      <!-- Footer Input Area -->
+      <footer class="chat-input-area">
+        <form id="chat-form">
+          <input type="text" id="chat-input" placeholder="Type your question here..." disabled>
+          <button type="submit" id="chat-send-btn" class="btn btn-primary btn-round" disabled>
+            <i class="fa-solid fa-paper-plane"></i> Send
+          </button>
+        </form>
+        <p class="input-footnote">InquiryBot uses RAG pipeline with ChromaDB and Llama 3 8B Instruct via OpenRouter.</p>
+      </footer>
+    </main>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="sidebar right-sidebar">
+      <!-- Top Retrieved Sources -->
+      <div class="card" id="sources-card">
+        <h3>Top Retrieved Sources</h3>
+        <div class="sources-list" id="retrieved-sources-list">
+          <p class="empty-list-placeholder">No sources retrieved yet.</p>
+        </div>
+        <button class="btn btn-outline btn-block" id="btn-view-all-sources" disabled>View All Sources</button>
+      </div>
+
+      <!-- Session Summary -->
+      <div class="card" id="summary-card">
+        <h3>Session Summary</h3>
+        <div class="summary-stat-row">
+          <span><i class="fa-regular fa-comment"></i> Messages</span>
+          <strong id="stat-messages">0</strong>
+        </div>
+        <div class="summary-stat-row">
+          <span><i class="fa-solid fa-file-invoice"></i> Sources Used</span>
+          <strong id="stat-sources">0</strong>
+        </div>
+        <div class="summary-stat-row">
+          <span><i class="fa-regular fa-clock"></i> Started At</span>
+          <strong id="stat-start">N/A</strong>
+        </div>
+        <div class="summary-stat-row">
+          <span><i class="fa-solid fa-history"></i> Last Activity</span>
+          <strong id="stat-activity">N/A</strong>
+        </div>
+      </div>
+
+      <!-- System Status -->
+      <div class="card" id="status-card">
+        <h3>System Status</h3>
+        <div class="status-row">
+          <span>RAG Pipeline</span>
+          <span class="status-badge active"><i class="fa-solid fa-check"></i> Active</span>
+        </div>
+        <div class="status-row">
+          <span>ChromaDB</span>
+          <span class="status-badge active" id="badge-chroma"><i class="fa-solid fa-check"></i> Connected</span>
+        </div>
+        <div class="status-row">
+          <span>LLM (Llama 3 8B)</span>
+          <span class="status-badge active"><i class="fa-solid fa-check"></i> Connected</span>
+        </div>
+        <div class="status-row">
+          <span>Embeddings</span>
+          <span class="status-badge active"><i class="fa-solid fa-check"></i> Active</span>
+        </div>
+      </div>
+
+      <!-- Need Help -->
+      <div class="card help-card">
+        <h3>Need Help?</h3>
+        <p>Our team is here to help you.</p>
+        <button class="btn btn-outline btn-block" id="btn-contact-support-2">Contact Support</button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- =========================================================================
+       ADMIN OVERLAY (FULL PANEL VIEW)
+       ========================================================================= -->
+  <div id="admin-app" class="admin-container" style="display: none;">
+    <header class="admin-header">
+      <div class="header-left">
+        <h2><i class="fa-solid fa-gauge"></i> InquiryBot Admin Panel</h2>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-primary" id="btn-back-to-chat"><i class="fa-solid fa-comment"></i> Back to Chat</button>
+        <button class="btn btn-outline" id="btn-admin-logout"><i class="fa-solid fa-sign-out-alt"></i> Logout</button>
+      </div>
+    </header>
+
+    <!-- ADMIN LOGIN MODAL -->
+    <div id="admin-login-view" class="admin-login-wrapper">
+      <div class="login-card">
+        <div class="lock-icon"><i class="fa-solid fa-lock"></i></div>
+        <h3>Admin Authentication</h3>
+        <p>Enter password to unlock administrative telemetry and management dashboards.</p>
+        <form id="admin-login-form">
+          <div class="form-group">
+            <input type="password" id="admin-password-input" placeholder="Password" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">Unlock Console</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- MAIN ADMIN PANELS -->
+    <div id="admin-dashboard-view" class="admin-dashboard-layout" style="display: none;">
+      <!-- Stats row -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Total Leads</span>
+            <h4 id="stat-admin-leads">0</h4>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fa-solid fa-user-clock"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Active Users</span>
+            <h4 id="stat-admin-active">0</h4>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fa-solid fa-comments"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Total Messages</span>
+            <h4 id="stat-admin-msgs">0</h4>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fa-solid fa-file-pdf"></i></div>
+          <div class="stat-info">
+            <span class="stat-label">Ingested Files</span>
+            <h4 id="stat-admin-docs">0</h4>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Tabs -->
+      <div class="admin-tabs-row">
+        <button class="tab-btn active" data-tab="tab-active-users">👥 Active Users</button>
+        <button class="tab-btn" data-tab="tab-chat-history">💬 Chat History</button>
+        <button class="tab-btn" data-tab="tab-leads">🎯 Leads CRM</button>
+        <button class="tab-btn" data-tab="tab-file-training">📄 File Training</button>
+        <button class="tab-btn" data-tab="tab-chat-training">🧠 FAQ Training</button>
+      </div>
+
+      <!-- TAB CONTENTS -->
+      <div class="tab-content-container">
+        
+        <!-- Active Users Tab -->
+        <div class="tab-panel active" id="tab-active-users">
+          <div class="tab-panel-header">
+            <h3>Currently Chatting Users</h3>
+            <div class="header-actions">
+              <label class="toggle-switch">
+                <input type="checkbox" id="admin-auto-refresh">
+                <span class="slider round"></span>
+              </label>
+              <span class="toggle-label">Auto-refresh (15s)</span>
+              <button class="btn btn-outline btn-sm" id="btn-refresh-active-users"><i class="fa-solid fa-sync"></i> Refresh</button>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User / Phone</th>
+                  <th>Email</th>
+                  <th>Session ID</th>
+                  <th>Messages</th>
+                  <th>Last Question</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="active-users-tbody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Chat History Tab -->
+        <div class="tab-panel" id="tab-chat-history">
+          <div class="tab-panel-header">
+            <h3>Full Chat History Log</h3>
+            <button class="btn btn-outline" id="btn-export-chat-csv"><i class="fa-solid fa-download"></i> Export CSV</button>
+          </div>
+          <div class="filter-bar">
+            <input type="text" id="filter-chat-phone" placeholder="Filter by phone">
+            <input type="text" id="filter-chat-name" placeholder="Filter by name">
+            <input type="text" id="filter-chat-session" placeholder="Filter by session ID">
+            <button class="btn btn-primary" id="btn-apply-chat-filters">Apply Filters</button>
+          </div>
+          <div class="transcript-grouped-view" id="chat-history-transcripts">
+            <!-- Grouped conversation rows go here -->
+          </div>
+        </div>
+
+        <!-- Leads CRM Tab -->
+        <div class="tab-panel" id="tab-leads">
+          <div class="tab-panel-header">
+            <h3>Leads Intelligence CRM</h3>
+          </div>
+          <div class="leads-cards-container" id="leads-crm-container">
+            <!-- Dynamically populated card listings with scores/ratings -->
+          </div>
+        </div>
+
+        <!-- File Ingestion Tab -->
+        <div class="tab-panel" id="tab-file-training">
+          <div class="tab-panel-header">
+            <h3>Document ingestion Platform</h3>
+          </div>
+          <div class="split-layout">
+            <div class="panel-left">
+              <div class="card">
+                <h4>Upload Knowledge PDF</h4>
+                <form id="doc-upload-form">
+                  <div class="upload-dropzone" id="upload-dropzone">
+                    <i class="fa-solid fa-cloud-upload-alt"></i>
+                    <p>Drag & drop PDF file here, or click to browse</p>
+                    <input type="file" id="doc-file-input" accept=".pdf" style="display: none;">
+                  </div>
+                  <div class="file-info-bar" id="upload-file-info" style="display: none;">
+                    <span class="file-name">filename.pdf</span>
+                    <button type="button" class="text-danger" id="btn-clear-upload"><i class="fa-solid fa-times"></i></button>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-block" id="btn-submit-upload" disabled>Upload & Ingest</button>
+                </form>
+              </div>
+            </div>
+            <div class="panel-right">
+              <div class="card">
+                <h4>Tracked Documents</h4>
+                <div class="table-wrapper">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>File Name</th>
+                        <th>Hash</th>
+                        <th>Chunks</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="documents-tbody">
+                      <!-- Dynamically loaded files lists -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ Training Tab -->
+        <div class="tab-panel" id="tab-chat-training">
+          <div class="tab-panel-header">
+            <h3>FAQ / Knowledge overrides</h3>
+          </div>
+          <div class="split-layout">
+            <div class="panel-left">
+              <div class="card">
+                <h4>Add Q&A Knowledge Pair</h4>
+                <form id="training-form">
+                  <div class="form-group">
+                    <label for="train-q">Question *</label>
+                    <textarea id="train-q" rows="3" placeholder="What is the pricing model?" required></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label for="train-a">Answer *</label>
+                    <textarea id="train-a" rows="4" placeholder="Pricing starts at..." required></textarea>
+                  </div>
+                  <div class="form-group">
+                    <label for="train-cat">Category</label>
+                    <input type="text" id="train-cat" placeholder="Pricing, Support, etc.">
+                  </div>
+                  <div class="form-group">
+                    <label for="train-tags">Tags (comma separated)</label>
+                    <input type="text" id="train-tags" placeholder="pricing, plan, costs">
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-block">Add to Knowledge base</button>
+                </form>
+              </div>
+            </div>
+            <div class="panel-right">
+              <div class="card">
+                <h4>FAQ Knowledge Base</h4>
+                <div class="faq-list" id="faq-training-list">
+                  <!-- Dynamically loaded list of FAQ overrides -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

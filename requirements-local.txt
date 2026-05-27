@@ -1,0 +1,12 @@
+langchain
+langchain-chroma
+chromadb
+streamlit
+python-dotenv
+pypdf
+openai
+fastapi
+uvicorn
+python-multipart
+python-docx
+
